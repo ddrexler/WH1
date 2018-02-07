@@ -1,3 +1,29 @@
+**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
+- [1. OSINT Reconnaissance](#)
+		- [Verwendete Tools](#)
+		- [Zielwahl](#)
+		- [The Harvester - E-Mail Recon](#)
+		- [Inspy - Linkedin Recon](#)
+		- [Maltego - OSINT Graphing](#)
+		- [Leaks](#)
+		- [Abschluss](#)
+- [2. Active Information Gathering - Nmap](#)
+		- [Prozessablauf](#)
+		- [Kommandos](#)
+- [3. Patch](#)
+		- [System:](#)
+		- [Software:](#)
+		- [Vorbereitungen](#)
+		- [Debugging mit IDA-Pro einrichten](#)
+		- [Vergleichfsfunktion(en) finden](#)
+		- [Patch des Programmes](#)
+- [4. Keygen](#)
+		- [Vorbereitung und Setup](#)
+		- [Analyse](#)
+		- [Skript und Proof of Concept](#)
+
+
 # 1. OSINT Reconnaissance
 
 In der ersten Aufgabe sollen mittels verschiedener OSINT-Werkzeuge Informationen über ein beliebiges Unternehmen gesammelt werden und bereits stattgefundene Leaks aufgestöbert werden.
