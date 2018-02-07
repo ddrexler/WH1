@@ -1,36 +1,10 @@
-**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
-
-- [1. OSINT Reconnaissance](#)
-		- [Verwendete Tools](#)
-		- [Zielwahl](#)
-		- [The Harvester - E-Mail Recon](#)
-		- [Inspy - Linkedin Recon](#)
-		- [Maltego - OSINT Graphing](#)
-		- [Leaks](#)
-		- [Abschluss](#)
-- [2. Active Information Gathering - Nmap](#)
-		- [Prozessablauf](#)
-		- [Kommandos](#)
-- [3. Patch](#)
-		- [System:](#)
-		- [Software:](#)
-		- [Vorbereitungen](#)
-		- [Debugging mit IDA-Pro einrichten](#)
-		- [Vergleichfsfunktion(en) finden](#)
-		- [Patch des Programmes](#)
-- [4. Keygen](#)
-		- [Vorbereitung und Setup](#)
-		- [Analyse](#)
-		- [Skript und Proof of Concept](#)
-		- 
-
 # 1. OSINT Reconnaissance
 
 In der ersten Aufgabe sollen mittels verschiedener OSINT-Werkzeuge Informationen über ein beliebiges Unternehmen gesammelt werden und bereits stattgefundene Leaks aufgestöbert werden.
 
 OSINT steht dabei für Open Source Intelligence. Das Open Source im Titel bezieht sich allerdings nicht auf Open Source im Sinne von open source Software, sondern auf offene und legale Informationsquellen. Das Sammeln von Daten von allen möglichen legalen Quellen wie beispielsweise der offiziellen Website des Unternehmens, Auftritten auf diversen Social Media Plattformen und so weiter wird davon abgedeckt.
 
-### Verwendete Tools
+## Verwendete Tools
 Die hier gezeigten Reconnaissance-Arbeiten werden auf einem MacBook Pro durchgeführt. Auf dem Computer werden je nach Aufgabe verschiedene virtuelle Maschinen vewendet.
 
 Für diesen Punkt kommt eine spezielle Linux Maschine namens Buscador (span.: "Suchender") zum Einsatz, welche mit einem vorinstallierten Bundle von gängigen OSINT Tools daherkommt und kostenlos im Netz verfügbar ist.
@@ -43,11 +17,11 @@ Auf Seite der Software werden die folgenden Tools verwendet:
 * Inspy
 * Maltego
 
-### Zielwahl
+## Zielwahl
 
 Für jede Informationssammelaufgabe muss als Erstes ein Ziel festgelegt werden. Für diese Arbeit wurde das deutsche Softwareunternehmen ATOSS Software AG ausgewählt.
 
-### The Harvester - E-Mail Recon
+## The Harvester - E-Mail Recon
 
 Als erstes OSINT Tool kommt nun TheHarvester zum Einsatz. Diese Utility ist als Kommandozeilen-Tool auf Kali installiert und als Tool mit graphischer Nutzeroberfläche auf dem Buscador. In diesem Fall habe ich das Tool aber mittels Homebrew auf meinem Mac installiert, da mir dort die Handhabe am einfachsten fällt.
 
@@ -180,7 +154,7 @@ Sebastian Velcelean Pirva
 
 ```
 
-### Inspy - Linkedin Recon
+## Inspy - Linkedin Recon
 
 Inspy ist eine kleine Utility über die ich kürzlich auf der Website hackingtutorials.org gestolpert bin. Inspy sucht gezielt nach Mitarbeiternamen und deren Jobfunktionen und greift dabei nur auf Linkedin zu.
 
@@ -318,7 +292,7 @@ Die Funktion der Herren zu kennen, wäre für einen späteren Social Engineering
 
 Andererseits kann man hier das Pferd auch von der anderen Seite aufzäumen, denn aufgrund des eindeutigen e-Mail Namensschemas sollte sich die e-Mail-Adresse von jedem der Inspy-Treffer leicht herleiten lassen. Hier stellt eher die zweifelhafte Aktualität der Treffer ein mögliches Hindernis dar.
 
-### Maltego - OSINT Graphing
+## Maltego - OSINT Graphing
 
 Das nächste Tool, das ich mir ansehe, ist Maltego, dessen Community Edition in Kali Linux bereits vorinstalliert ist. Dieses Progamm ist speziell für OSINT Zwecke konzipiert worden und implementiert einiges der Funtionalität von zB TheHarvester. Das Besondere an Maltego ist die Herangehensweise, da es dem Nutzer eine schnelle und einfache Erstellung von Baumgraphen zur Veranschaulichung der Suchergebnisse bietet. Dazu wird einfach ein Projekt für eine bestimmte Recon, in diesem Fall wieder "ATOSS", angelegt und dann kann auch schon eine automatisierte Suche nach ersten Ergebnissen durchgeführt werden.
 
@@ -362,7 +336,7 @@ Diese Suche liefert mir nun diverse DNS-Server welche mit der Domain verknüpft 
 
 Hier wird es mir langsam zu heikel und ich beende meine Suche mit Maltego. Allerdings bin ich begeistert, wie einfach es einem dieses Tool macht, umfangreiche Recherchen durchzuführen.
 
-### Leaks
+## Leaks
 
 Nun haben wir zweifelsohne bereits einige interessante Informationen zutage gefördert, doch das eigentliche Ziel, Leaks über das Unternehmen herauszufinden, ist nicht erfüllt. Ich bin nicht überrascht, das ich weiß, dass Atoss über recht hohe Sicherheitsstandards verfügt. Aber es muss doch zumindest irgendetwas geben...
 
@@ -384,7 +358,7 @@ So ein Fund wäre natürlich besonders interessant, wenn es um einen Firmenaccou
 
 Würde ich jetzt mit Atoss tatsächlich Böses im Schilde führen, würde ich meine Suche vermutlich auf einige der höherrangigen Mitarbeiter aus dem Inspy-Fund konzentrieren und zu versuchen über deren private Webprofile an weitere Informationen zu gelangen. Angriffsvektoren gäbe es hier unzählige.
 
-### Abschluss
+## Abschluss
 
 Leider habe ich diesen ersten Teil erst als letzten begonnen um zuerst die technischeren Aufgaben in den Griff zu bekommen, daher war meine Zeit für die OSINT-Recherchen äußerst begrenzt. Doch es ist ein äußerst interessantes Gebiet und ich bin fasziniert bei den Angebot an frei verfügbaren Tools. Mit Maltego werde ich mich in Zukunft definitiv noch näher beschäftigen. 
 
@@ -393,7 +367,7 @@ Leider habe ich diesen ersten Teil erst als letzten begonnen um zuerst die techn
 
 In dieser Aufgabe werden aktiv Informationen über die Domäne scanme.nmap.org gesammelt. Dies erfolgt mittels der Commandline-Utilty nmap, welche alle Arten von Portscans ermöglicht.
 
-### Prozessablauf
+## Prozessablauf
 
 Dabei sieht der Prozessablauf folgendermaßen aus:
 
@@ -403,7 +377,7 @@ Dabei sieht der Prozessablauf folgendermaßen aus:
 
 Zunächst wollen wir also sämtliche Live Hosts des Zieles ausfindig machen, sowie die geöffneten Ports. Anschließend sollen die laufenden Services augezählt werden und schlussendlich soll eruiert werden, welches Betriebssystem auf der jeweiligen Zielmaschine läuft.
 
-### Kommandos
+## Kommandos
 
 Zunächst wird das wahrscheinlich meistgenützte nmap Kommando "nmap -sP target/[subnet]" ausgeführt (alternativ kann dasselbe Kommando mit dem -sn Schalter ausgeführt werden). Dadurch, dass ein Subnet angegeben wird, listet nmap sämtliche Live Hosts eines Subnetzes für das Target:
 
@@ -779,15 +753,15 @@ Der Scan kann keine Auskunft mit 100%-iger Sicherheit geben jedoch dürfte auf d
 
 In dieser Aufgabe soll ein Programm so gepatcht werden, dass bei der Abfrage des Nutzernamens und des Passworts jede beliebige Kombination zu einem erfolgreichen Login führt.
 
-### System:
+## System:
 * MacOS Host-System
 * Kali Linux (32bit - Offsec Distribution)
 * Windows XP (32bit, SP3)
 
-### Software:
+## Software:
 * IDA Pro Debugger
 
-### Vorbereitungen
+## Vorbereitungen
 
 Zunächst wird die Binary "Passcheck" in die Kali-VM überspielt. Mit dem Befehl 
 ```
@@ -806,7 +780,7 @@ gestartet werden. "aaaaaaaa" und "bbbbbbbb" sind beliebig angenommene Eingabepar
 
 Diese Kombination von Nutzernamen und Passwort wird vom Programm nicht als richtig anerkannt, daher erfolgt die Ausgabe, die in der obigen Abbildunng zu sehen ist.
 
-### Debugging mit IDA-Pro einrichten
+## Debugging mit IDA-Pro einrichten
 
 Um das Programm batchen zu können, muss die Vergleichsfunktion, welche die Eingabewerte auf ihre Richtigkeit überprüft, gefunden und ausgehebelt werden. Da der Source Code des Programms nicht vorliegt, muss das Binary File selbst debuggt werden.
 
@@ -827,7 +801,7 @@ Ein erster Testdurchlauf mit dem IDA-Debugger zeigt, dass der Debug-Vorgang erfo
 
 ![alt text](https://i.imgur.com/ubefyZP.png "Logo Title Text XXX")
 
-### Vergleichfsfunktion(en) finden
+## Vergleichfsfunktion(en) finden
 
 Da Ausgabestrings des Programms immer einen guten ersten Anhaltspunkt bei der Suche nach spezifischer Funktionalität bieten wird zunächst nach dem String "Cookies", der einen Substring der Ausgabe nach erfolglosem Login darstellt, durchgeführt. Mit "Alt + T" wird die Stringsuche aufgerufen:
 
@@ -861,7 +835,7 @@ Die Suche zeigt, dass der String in der Tat an einer weiteren Stelle auftaucht u
 
 Nun wurden alle Vorkommnise der Vergleichsfunktion gefunden und der Patch kann erfolgen.
 
-### Patch des Programmes
+## Patch des Programmes
 
 Die einfachste Lösung, um das Programm so zu patchen, dass jeder Inputwert akzeptiert wird, ist also einfach diesen Vergleich auszuheben. IDA-Pro bietet die Möglichkeit direkt zu patchen. Dazu wird die erste Vergleichsinstruktion markiert und anschließend das Menü "Edit -> Patch program: -> Assemble..." ausgewählt: 
 
@@ -900,7 +874,7 @@ In der vierten Aufgabe soll nun für die ursprüngliche (also ungepatchte) Appli
 
 Dazu muss der Sourcecode genauer analysiert werden um herauszufinden, wie das Passwort in der ursprünglichen Applikation generiert wird.
 
-### Vorbereitung und Setup
+## Vorbereitung und Setup
 
 Die Analyse erfolgt mit demselben Setup, dass bereits für Punkt 3 verwendet wurde. IDA Pro debuggt das File erneut mit Hilfe der Remote Kali-VM.
 
@@ -908,7 +882,7 @@ Nachdem die ursprünglichen "Passcheck"-Dateien auf beiden Maschinen wiederherge
 
 Wenn der genaue Erstellprozess des Passworts im Programm gefunden wurde, dann gilt es diesen mit einer beliebigen Programmiersprache abzubilden und ein Programm zu schreiben, welches als Input lediglich den Nutzernamen nimmt und das dazu passende Passwort für "Passcheck" erzeugt.
 
-### Analyse
+## Analyse
 
 Zunächst wird erneut mittels Stringsuche der Code nahe des ersten "Cookie" strings aufgerufen:
 
@@ -1000,7 +974,7 @@ Am Ende der Schleife wird Zeichen für Zeichen überprüft, ob das generierte Ze
 
 In der zweiten Schleife nun werden die restlichen Zeichen erzeugt, da das Passwort eine feste Länge von 10 Zeichen hat. Hier erklärt sich nun auch der zweite Vergleich im Quellcode. Wenn bereits der erste Vergleich ein negatives Ergebnis geliert hat, wird diese Schleife gleich zu Beginn gebrochen. Ansonsten werden die restlichen Zeichen erzeugt indem erneut der Dezimalwert des Zeichens der letzten Runde des Passworts herangezogen wird. Dieser wird anschließend mit dem um 65 erhöhten Counter, auf den eine Linksbitverschiebung des von 10 dezimierten Counters angewandt wurde addiert. Diese Linksbitverschiebung multipliziert die Zahl um den Faktor 2 und zwar für jede der Stellen. So würde beispielsweise ein Verschiebung 2 << 2 die Zahl 8 ergeben (Binär: 2 -> 10, 8 -> 1000). Die 1 wurde binär um 2 Stellen nach links verschoben.
 
-### Skript und Proof of Concept
+## Skript und Proof of Concept
 
 Am Ende wurde das folgende Python-Skript generiert um die Passworterstellung aus dem Originalcode abzubilden.
 
@@ -1116,7 +1090,7 @@ Escape character is '^]'.
 ```
 
 
-### Inputmöglichkeiten finden
+## Inputmöglichkeiten finden
 Nun gilt es verschiedene Möglichkeiten für die Eingabe von Userinput zu finden. Erst wenn diese gefunden sind, kann ein entsprechendes Fuzzing Script geschrieben werden. Nach kurzem Überprüfen der Punkte, die im Hilfsmenü ausgewiesen werden, zeigt sich, dass folgende Punkte zu Eingabeaufforderungen führen:
 
 * S
@@ -1330,7 +1304,7 @@ Mit diesem Wissenstand kann der EIP nun mit einer dazu gebracht werden, auf eine
 
 
 
-### Der Angriff
+## Der Angriff
 
 Im nächsten Schritt wurde nun ein weiteres Skript erzeugt, welches den Angriff auf das Zielprogramm ausführt. Das Ziel ist den Buffer-Overflow zu erzeugen und das Programm zur Ausführung eines Shellskripts zu bringen, welches den Windows Taschenrechner öffnet.
 
@@ -1338,7 +1312,7 @@ Im nächsten Schritt wurde nun ein weiteres Skript erzeugt, welches den Angriff 
 Im Angriffskript wird nun der Input so eingespielt, dass der EIP mit einer JMP-Instruktion, also einem Sprung zu einer deutlich früheren Memory-Adresse überschrieben wird. Diese Adresse liegt innerhalb des Bereichs unseres Buffers und ist zunächst mit NOPs (= No operations, Hex: x90) gefüllt. Diese werden einfach durchiteriert ohne dass etwas passiert, bis unser Schadcode zur Ausführung kommt.
 
 
-### Das peinliche Ende
+## Das peinliche Ende
 
 An dieser Stelle muss ich leider anmerken, dass ich die restlichen Details dieses speziellen Buffer Overflow auch nach mittlerweile 12 Tagen, die ich mich damit beschäftige, nicht wirklich begreife. 
 
